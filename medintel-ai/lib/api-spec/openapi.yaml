@@ -1,0 +1,380 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: MedIntel AI - Multi-Agent Clinical Intelligence Platform
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: documents
+    description: Document management
+  - name: chat
+    description: AI chat operations
+  - name: analytics
+    description: Analytics and metrics
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /documents:
+    get:
+      operationId: listDocuments
+      tags: [documents]
+      summary: List all uploaded documents
+      responses:
+        "200":
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Document"
+
+  /documents/{id}:
+    get:
+      operationId: getDocument
+      tags: [documents]
+      summary: Get a document by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteDocument
+      tags: [documents]
+      summary: Delete a document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+        "404":
+          description: Document not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /upload:
+    post:
+      operationId: uploadDocument
+      tags: [documents]
+      summary: Upload a clinical document
+      responses:
+        "200":
+          description: Document uploaded and processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chat:
+    post:
+      operationId: chat
+      tags: [chat]
+      summary: Ask a question about uploaded documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatInput"
+      responses:
+        "200":
+          description: AI response with citations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResult"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /analytics:
+    get:
+      operationId: getAnalytics
+      tags: [analytics]
+      summary: Get analytics and metrics
+      responses:
+        "200":
+          description: Analytics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analytics"
+
+  /queries:
+    get:
+      operationId: listQueries
+      tags: [analytics]
+      summary: List recent queries
+      responses:
+        "200":
+          description: Recent query history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QueryRecord"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+        version:
+          type: string
+      required:
+        - status
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        file_type:
+          type: string
+        file_size:
+          type: integer
+        pages:
+          type: ["integer", "null"]
+        chunk_count:
+          type: integer
+        uploaded_at:
+          type: string
+        status:
+          type: string
+      required:
+        - id
+        - name
+        - file_type
+        - file_size
+        - chunk_count
+        - uploaded_at
+        - status
+
+    ChatInput:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 1
+        document_ids:
+          type: array
+          items:
+            type: string
+      required:
+        - question
+
+    ChatResult:
+      type: object
+      properties:
+        answer:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/Source"
+        confidence:
+          type: number
+        intent:
+          type: string
+        latency_ms:
+          type: number
+      required:
+        - answer
+        - sources
+        - confidence
+        - intent
+        - latency_ms
+
+    Source:
+      type: object
+      properties:
+        document_id:
+          type: string
+        document_name:
+          type: string
+        page:
+          type: ["integer", "null"]
+        chunk_text:
+          type: string
+        relevance_score:
+          type: number
+      required:
+        - document_id
+        - document_name
+        - chunk_text
+        - relevance_score
+
+    Analytics:
+      type: object
+      properties:
+        total_documents:
+          type: integer
+        total_queries:
+          type: integer
+        avg_latency_ms:
+          type: number
+        avg_confidence:
+          type: number
+        success_rate:
+          type: number
+        queries_per_day:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailyStats"
+        confidence_trend:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrendPoint"
+        intent_distribution:
+          type: array
+          items:
+            $ref: "#/components/schemas/IntentCount"
+      required:
+        - total_documents
+        - total_queries
+        - avg_latency_ms
+        - avg_confidence
+        - success_rate
+        - queries_per_day
+        - confidence_trend
+        - intent_distribution
+
+    DailyStats:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+        avg_latency_ms:
+          type: number
+      required:
+        - date
+        - count
+        - avg_latency_ms
+
+    TrendPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        avg_confidence:
+          type: number
+        avg_latency_ms:
+          type: number
+      required:
+        - date
+        - avg_confidence
+        - avg_latency_ms
+
+    IntentCount:
+      type: object
+      properties:
+        intent:
+          type: string
+        count:
+          type: integer
+      required:
+        - intent
+        - count
+
+    QueryRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        question:
+          type: string
+        intent:
+          type: string
+        confidence:
+          type: number
+        latency_ms:
+          type: number
+        created_at:
+          type: string
+        answer_preview:
+          type: string
+      required:
+        - id
+        - question
+        - intent
+        - confidence
+        - latency_ms
+        - created_at
+        - answer_preview
+
+    DeleteResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
